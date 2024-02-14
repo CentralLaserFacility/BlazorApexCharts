@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\DotNet.ChannelAccess\Clf.ChannelAccess\Clf.ChannelAccess.csproj" />
+    <ProjectReference Include="..\BlazorApexCharts.Docs\BlazorApexCharts.Docs.csproj" />
+  </ItemGroup>
+
+</Project>

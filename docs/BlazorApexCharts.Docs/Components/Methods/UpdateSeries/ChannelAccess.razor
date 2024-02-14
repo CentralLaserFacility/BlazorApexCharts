@@ -1,0 +1,127 @@
+﻿@page "/methods/channel-access"
+@using BlazorApexCharts.Docs.Data
+@using System.Timers
+@using Clf.ChannelAccess
+@implements IDisposable
+
+<h3>ChannelAccess</h3>
+<DemoContainer>
+  <ApexChart @ref=chart TItem="RealTimeSeries"
+             Title="Tim's bench - Local magnetic field'"
+             XAxisType="XAxisType.Datetime"
+             Options=options>
+
+    <ApexPointSeries TItem="RealTimeSeries"
+                     Items="generator.TimeSeries"
+                     Name="Gauss"
+                     SeriesType="SeriesType.Line"
+                     XValue="@(e => e.Date)"
+                     YValue="@(e => e.Value)"
+                     OrderBy="e=>e.X" />
+  </ApexChart>
+  <!-- @_myUnits -->
+</DemoContainer>
+
+@code {
+  private ApexChart<RealTimeSeries> chart;
+  private ApexChartOptions<RealTimeSeries> options;
+  private RealTimeSeriesGenerator generator = new RealTimeSeriesGenerator(60);
+  private bool timerInitialized = false;
+  private Timer timer;
+  private DateTimeOffset maxTime;
+  private int counter;
+  private List<MagneticResult> dataset = new List<MagneticResult>();
+  private ChannelsHandler _channelsHandler = new ChannelsHandler();
+  IChannel _streamChannel = null;
+  double _myValue;
+  string _myUnits;
+
+
+  //_myUnits = valueInfo.AuxiliaryInfo.EGU;
+
+  //protected override async Task OnInitializedAsync()
+  protected override void OnInitialized()
+  {
+    _channelsHandler.InstallChannel(_streamChannel = Hub.GetOrCreateChannel("BENCH:HIRST1:val"),
+      (isConnected, state) => { if (isConnected) timerInitialized = true; },
+      (valueInfo, _) => { _myValue = (double)valueInfo.Value;  });
+    options = new ApexChartOptions<RealTimeSeries>();
+
+    options.Xaxis = new XAxis
+    {
+      Range = generator.Range
+    };
+
+    options.Yaxis = new List<YAxis> {
+            new YAxis {
+                Max = 30,
+                Min = -30 }
+        };
+    options.Stroke = new Stroke { Curve = Curve.Smooth };
+    options.Chart = new Chart
+    {
+      Animations = new Animations
+      {
+        Easing = Easing.Linear,
+        DynamicAnimation = new DynamicAnimation
+        {
+          Speed = 950
+        }
+      },
+      Toolbar = new Toolbar
+      {
+        Show = false
+      },
+      Zoom = new Zoom
+      {
+        Enabled = false
+      }
+    };
+  }
+
+  private string GetYAxisLabel(decimal value)
+  {
+    return _myUnits;  //attrib:  FormatYAxisLabel="@GetYAxisLabel"
+  }
+
+  protected override void OnAfterRender(bool firstRender)
+  {
+    if (firstRender && !timerInitialized)
+    {
+      timerInitialized = true;
+      timer = new Timer(500);
+      timer.Elapsed += async delegate { await UpdateChartSeries(); };
+      timer.Enabled = true;
+    }
+  }
+
+  private async Task UpdateChartSeries()
+  {
+
+    // if (counter > 100) //Reset the chart
+    // {
+    //   await chart.UpdateSeriesAsync(true);
+    //   counter = 0;
+    //   maxTime = DateTimeOffset.MinValue;
+    //   return;
+    // }
+
+    // if (maxTime == DateTimeOffset.MinValue)
+    // {
+    //   maxTime = generator.TimeSeries.Max(e => e.Date);
+    // }
+
+    maxTime = maxTime.AddSeconds(1);
+    await chart.AppendDataAsync(new List<RealTimeSeries> { generator.GenerateNewPoint(maxTime, _myValue) });
+    counter++;
+
+  }
+
+  public void Dispose()
+  {
+    timer?.Stop();
+    timer = null;
+  }
+
+
+  }
