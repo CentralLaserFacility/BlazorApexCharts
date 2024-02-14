@@ -1,8 +1,0 @@
-[submodule "DotNet.ChannelAccess"]
-        path = src/DotNet.ChannelAccess
-        url = git@github.com:CentralLaserFacility/DotNet.ChannelAccess.git
-        branch = development
-[submodule "DotNet.Common"]
-        path = src/DotNet.Common
-        url = git@github.com:CentralLaserFacility/DotNet.Common.git
-        branch = development
