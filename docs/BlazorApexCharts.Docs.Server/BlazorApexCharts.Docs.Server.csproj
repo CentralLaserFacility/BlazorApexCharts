@@ -2,10 +2,10 @@
 
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
+    <UserSecretsId>55ff10a4-af82-40bc-951c-0dfb9ad453cc</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\DotNet.ChannelAccess\Clf.ChannelAccess\Clf.ChannelAccess.csproj" />
     <ProjectReference Include="..\BlazorApexCharts.Docs\BlazorApexCharts.Docs.csproj" />
   </ItemGroup>
 
