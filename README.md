@@ -1,0 +1,2 @@
+# BlazorApexCharts
+BlazorApexCharts
