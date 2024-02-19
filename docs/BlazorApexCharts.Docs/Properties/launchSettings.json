@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "BlazorApexCharts.Docs": {
+      "commandName": "Project",
+      "hotReloadEnabled": false
+    }
+  }
+}
