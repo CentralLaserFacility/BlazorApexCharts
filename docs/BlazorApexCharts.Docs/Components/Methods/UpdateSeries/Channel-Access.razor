@@ -50,6 +50,9 @@
   (double Min, double Max) _myRange;    //TODO: Need to dynamically change range based on this tuple.
   string _myUnit = "";
   string _lastUnit;
+
+  double _lastLowerRange;
+  double _lastUpperRange;
   string _csvExportFileName = "C:/Temp/gaussData.";
 
   //TODO: Below for async event based timing - as per EventSpawned providing rather than consuming values.
@@ -59,9 +62,11 @@
     //Set default graphing options
     _channelsHandler.InstallChannel(
       _streamChannel = Hub.GetOrCreateChannel("BENCH:HIRST1:val"),
-      (isConnected, state) => { timerInitialized = ConnectionStatus(isConnected); },
+      (isConnected, state) => { timerInitialized = ConnectionDidChange(isConnected); },
       (valueInfo, _) => { _myValue = (double)valueInfo.Value; _myUnit = EventSpawned(valueInfo.AuxiliaryInfo); }
     );
+
+    //(isConnected, state) => { timerInitialized = ConnectionStatus(isConnected, state); },
 
 
     //POLLER vs SPAWNER...
@@ -136,18 +141,20 @@
       };
   }
 
-  protected bool ConnectionStatus(bool isChannelUp)
+  //protected bool ConnectionStatus(bool isChannelUp, ChannelState state)
+  protected bool ConnectionDidChange(bool isChannelUp)
   {
     //TODO: DEBUG hook.
     _isChannelUp = isChannelUp;
-    if (!isChannelUp)   Console.Write("PV is offline");
+    if (!isChannelUp) Console.Write("PV went offline @ " + DateTime.Now.ToString("G"));
     Task.Run(() => BlankGraph());  //Connection wobbles will spawn a new graph...
+                                   //Console.Write("DEBUG :" + state.ChannelHasConnected);
     return isChannelUp;
   }
 
   protected void DoChartOffline()
   {
-    
+    //Do we want to Pause & Run or just BlankOut 'above' in disconnect type events
     Task.Run(() => UpdateChartSeries());
   }
 
@@ -162,11 +169,19 @@
     return false;
   }
 
-  protected bool RangeDidChange(string unit)
+  protected bool RangeDidChange(double lowerRange, double upperRange)
   {
-    if (_lastUnit != unit)
+    _myRange = (lowerRange, upperRange);
+    if (_lastUpperRange != upperRange)
     {
-      _lastUnit = unit;
+      _lastUpperRange = upperRange;
+
+      Task.Run(() => BlankGraph());
+      return true;
+    }
+    if (_lastLowerRange != lowerRange)
+    {
+      _lastLowerRange = lowerRange;
       Task.Run(() => BlankGraph());
       return true;
     }
@@ -178,7 +193,13 @@
   {
     //Return value particulars to the relevant member variables.
     UnitsDidChange(scalingUnits.EGU);
-    _myRange = ((double)scalingUnits.LOW, (double)scalingUnits.HIGH);
+    RangeDidChange((double)scalingUnits.LOPR, (double)scalingUnits.HOPR);
+
+    if (chart != null)
+    {
+      chart.Options.Yaxis[0].Min = _myRange.Min;
+      chart.Options.Yaxis[0].Max = _myRange.Max;
+    }
     return scalingUnits.EGU;
   }
 
@@ -217,7 +238,7 @@
         await chart.AppendDataAsync(
           new List<RealTimeSeries> {
             generator.GenerateNewPoint(maxTime, _myValue)
-                  }
+          }
         );
         counter++;
       }
@@ -261,14 +282,18 @@
         {
           //Sync after units change and state new measurement time.
           chart.Options.Xaxis.Title = new AxisTitle() { Text = "Time (sec) - Commenced @ " + DateTime.Now.ToString("G") };          
+          chart.Options.Chart.Background = "#F6F8FA";
         } else {
           chart.Options.Xaxis.Title = new AxisTitle() { Text = "NO DATA - Commenced @ " + DateTime.Now.ToString("G") };
-          chart.Options.Chart.DropShadow = new DropShadow() { Color = "#E0B0FF" };
+          chart.Options.Chart.Background = "#E0B0FF";          
         }
 
         if (chart.Options.Yaxis != null)
         {
           chart.Options.Yaxis[0].Title = new AxisTitle() { Text = "Intensity (" + _myUnit + ")" };
+          //Scaling from Gauss PV
+          //chart.Options.Yaxis[0].Min = _myRange.Min;
+          //chart.Options.Yaxis[0].Max = _myRange.Max;
         }
         //chart.Options.Yaxis[1].Title = new AxisTitle() { Text = "Baseline (CLF)" };
 
